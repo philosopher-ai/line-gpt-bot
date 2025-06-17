@@ -1,3 +1,24 @@
+const express = require('express');
+const line = require('@line/bot-sdk');
+const { OpenAI } = require('openai');
+
+// LINE設定（環境変数から取得）
+const config = {
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.CHANNEL_SECRET,
+};
+
+// クライアント初期化
+const client = new line.Client(config);
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Express初期化
+const app = express();
+app.use(express.json()); // JSONパーサーはここで設定（POSTデータ取得に必要）
+
+// LINE Webhookエンドポイント設定
 app.post('/callback', line.middleware(config), async (req, res) => {
   const events = req.body.events;
 
@@ -7,17 +28,8 @@ app.post('/callback', line.middleware(config), async (req, res) => {
 
       try {
         const gptResponse = await openai.chat.completions.create({
-          messages: [
-            {
-              role: 'system',
-              content: "あなたはお釈迦様です。相談者の悩みに対して、空、縁起、輪廻転生、無我など仏教の教えを元に、短文で鋭く印象的に本質を突いて回答してください。"
-            },
-            {
-              role: 'user',
-              content: userMessage
-            }
-          ],
-          model: 'gpt-3.5-turbo', // 無料プラン用。課金は 'gpt-4-turbo' に変更
+          messages: [{ role: 'user', content: userMessage }],
+          model: 'gpt-3.5-turbo', // 課金ユーザーはここをgpt-4に変更する
         });
 
         const replyText = gptResponse.choices[0].message.content.trim();
@@ -30,11 +42,17 @@ app.post('/callback', line.middleware(config), async (req, res) => {
         console.error('OpenAI APIエラー:', error);
         await client.replyMessage(event.replyToken, {
           type: 'text',
-          text: '迷いもまた縁。少し間をおいてまた問いなさい。',
+          text: 'エラーが発生しました。もう一度お試しください。',
         });
       }
     }
   }
 
   res.status(200).end();
+});
+
+// Renderのポート設定
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
