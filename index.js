@@ -4,7 +4,7 @@ const { OpenAI } = require('openai');
 
 const config = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET
+  channelSecret: process.env.CHANNEL_SECRET,
 };
 
 const client = new line.Client(config);
@@ -36,9 +36,8 @@ app.post('/callback', line.middleware(config), async (req, res) => {
   res.status(200).end();
 });
 
-// 重要: ポート番号を環境変数から取得
-const port = process.env.PORT || 3000; 
-
+// Render用のポート設定（重要）
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
