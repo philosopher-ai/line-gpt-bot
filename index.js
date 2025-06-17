@@ -3,38 +3,40 @@ const line = require('@line/bot-sdk');
 const { OpenAI } = require('openai');
 
 const config = {
-    channelAccessToken: 'あなたのLINEチャネルアクセストークン',
-    channelSecret: 'bdb659b3c4e0c0cde575fbe0e40398955'
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.CHANNEL_SECRET
 };
 
+const client = new line.Client(config);
 const openai = new OpenAI({
-    apiKey: 'あなたのOpenAIのAPIキー'
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const app = express();
 app.use(express.json());
 
 app.post('/callback', line.middleware(config), async (req, res) => {
-    const events = req.body.events;
+  const events = req.body.events;
 
-    for (const event of events) {
-        if (event.type === 'message' && event.message.type === 'text') {
-            const userMessage = event.message.text;
+  for (const event of events) {
+    if (event.type === 'message' && event.message.type === 'text') {
+      const userMessage = event.message.text;
 
-            const gptResponse = await openai.chat.completions.create({
-                messages: [{ role: 'user', content: userMessage }],
-                model: 'gpt-3.5-turbo'
-            });
+      const gptResponse = await openai.chat.completions.create({
+        messages: [{ role: 'user', content: userMessage }],
+        model: 'gpt-3.5-turbo'
+      });
 
-            const replyText = gptResponse.choices[0].message.content.trim();
+      const replyText = gptResponse.choices[0].message.content.trim();
 
-            const client = new line.Client(config);
-            await client.replyMessage(event.replyToken, { type: 'text', text: replyText });
-        }
+      await client.replyMessage(event.replyToken, { type: 'text', text: replyText });
     }
-    res.status(200).send('OK');
+  }
+
+  res.status(200).end();
 });
 
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
