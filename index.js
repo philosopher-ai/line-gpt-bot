@@ -35,6 +35,8 @@ app.post('/callback', line.middleware(config), async (req, res) => {
 
   res.status(200).end();
 });
+
+// 重要: ポート番号を環境変数から取得
 const port = process.env.PORT || 3000; 
 
 app.listen(port, () => {
