@@ -1,54 +1,47 @@
-const express = require('express');
-const line = require('@line/bot-sdk');
-const { OpenAI } = require('openai');
+// index.js  ── 最小構成
+import 'dotenv/config';
+import express from 'express';
+import { Client, middleware } from '@line/bot-sdk';
+import OpenAI from 'openai';
 
-const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET,
+const lineConfig = {
+  channelAccessToken: process.env.LINE_TOKEN,
+  channelSecret: process.env.LINE_SECRET,
 };
-
-const client = new line.Client(config);
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = new Client(lineConfig);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 
 const app = express();
-app.use(express.json());
+app.use(middleware(lineConfig));
 
-app.post('/callback', line.middleware(config), async (req, res) => {
-  const events = req.body.events;
-
-  for (const event of events) {
-    if (event.type === 'message' && event.message.type === 'text') {
-      const userMessage = event.message.text;
-
-      try {
-        const gptResponse = await openai.chat.completions.create({
-          messages: [{ role: 'user', content: userMessage }],
-          model: 'gpt-3.5-turbo', // 無課金は3.5-turboを維持
-        });
-
-        const replyText = gptResponse.choices[0].message.content.trim();
-
-        await client.replyMessage(event.replyToken, {
-          type: 'text',
-          text: replyText,
-        });
-      } catch (error) {
-        console.error('OpenAI APIエラー:', error);
-        await client.replyMessage(event.replyToken, {
-          type: 'text',
-          text: 'エラーが発生しました。もう一度お試しください。',
-        });
-      }
-    }
-  }
-
-  res.status(200).end();
+app.post('/webhook', async (req, res) => {
+  const results = await Promise.all(req.body.events.map(handleEvent));
+  res.json(results);
 });
 
-// Renderポート設定
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+async function handleEvent(evt) {
+  if (evt.type !== 'message' || evt.message.type !== 'text') return;
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',          // 後で動的に切り替え
+    messages: [
+      {
+        role: 'system',
+        content:
+          'あなたは慈悲深き釈迦。如来の知恵「縁起・無我・空・諸行無常・輪廻」を 1〜2 行で、分かりやすく説き、最後に短い行動指針を与える。',
+      },
+      { role: 'user', content: evt.message.text },
+    ],
+    temperature: 0.7,
+    max_tokens: 120,
+  });
+
+  return client.replyMessage(evt.replyToken, {
+    type: 'text',
+    text: completion.choices[0].message.content.trim(),
+  });
+}
+
+app.get('/', (_, res) => res.send('ok')); // Render のヘルスチェック用
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Listening on ${PORT}`));
