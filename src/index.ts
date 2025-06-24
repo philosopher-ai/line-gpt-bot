@@ -56,5 +56,6 @@ async function handleEvent(evt: any) {
 }
 
 // ---- ポート設定 --------------------------------------------------
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;   // ← ここを Number() で包む
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+
