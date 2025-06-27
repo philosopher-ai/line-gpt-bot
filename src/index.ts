@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(middleware(lineConfig));
 
 /* LINE の［検証］用 GET に 200 を返す */
-app.get('/webhook', (_, res) => res.status(200).send('OK'));
+app.get('/webhook', (_req, res) => { res.status(200).send('OK'); });
 
 /* 本番メッセージを受け取る POST */
 app.post('/webhook', async (req, res) => {
@@ -36,8 +36,9 @@ async function handleEvent(evt: any) {
   if (
     evt.replyToken === '00000000000000000000000000000000' ||
     evt.replyToken === 'ffffffffffffffffffffffffffffffff'
-  )
+  ) {
     return;
+  }
 
   // テキスト以外は無視
   if (evt.type !== 'message' || evt.message.type !== 'text') return;
